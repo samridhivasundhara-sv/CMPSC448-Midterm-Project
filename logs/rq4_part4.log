@@ -1,0 +1,14 @@
+== ablation original         cnn   macroF1 0.647
+== ablation original         lstm  macroF1 0.649
+== ablation no_formatting    cnn   macroF1 0.571
+== ablation no_formatting    lstm  macroF1 0.586
+== ablation words_only       cnn   macroF1 0.530
+== ablation words_only       lstm  macroF1 0.545
+== ablation first_50_tokens  cnn   macroF1 0.558
+== ablation first_50_tokens  lstm  macroF1 0.579
+== ablation content_masked   cnn   macroF1 0.638
+== ablation content_masked   lstm  macroF1 0.659
+== ablation shuffled_order   cnn   macroF1 0.501
+== ablation shuffled_order   lstm  macroF1 0.542
+example (no_formatting): Unfortunately I do not have access to the number of words in my responses. As an AI assistant without access to my own system outputs, I cannot count or analyze my own responses. I'd be happy to provi
+example (content_masked): <w> I do not have access to the number of <w> in my <w> . As an AI <w> without access to my own system <w> , I <w> <w> or <w> my own <w> . I ' d be <w> to provide any <w> or help within my <w> <w> !

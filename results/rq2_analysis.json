@@ -1,0 +1,201 @@
+{
+  "input_only_tfidf": {
+    "accuracy": 0.21838790931989924,
+    "macro_f1": 0.2178058781823961
+  },
+  "paired": {
+    "n_test_rows_in_pairs": 720,
+    "share_of_test": 0.181360201511335,
+    "accuracy_on_paired_rows": 0.20694444444444443,
+    "accuracy_on_unpaired_rows": 0.22092307692307692,
+    "max_possible_on_paired_rows": 0.5
+  },
+  "prompt_profile": {
+    "Claude": {
+      "prompt_words_median": 15.0,
+      "non_english_share": 0.0018,
+      "task_code": 0.14,
+      "task_math": 0.077,
+      "task_qa": 0.658,
+      "task_writing": 0.125
+    },
+    "GPT": {
+      "prompt_words_median": 15.0,
+      "non_english_share": 0.0015,
+      "task_code": 0.1352,
+      "task_math": 0.0695,
+      "task_qa": 0.6708,
+      "task_writing": 0.1245
+    },
+    "Google": {
+      "prompt_words_median": 14.0,
+      "non_english_share": 0.0012,
+      "task_code": 0.1162,
+      "task_math": 0.0642,
+      "task_qa": 0.682,
+      "task_writing": 0.1375
+    },
+    "Llama": {
+      "prompt_words_median": 15.0,
+      "non_english_share": 0.0005,
+      "task_code": 0.1332,
+      "task_math": 0.0695,
+      "task_qa": 0.6645,
+      "task_writing": 0.1328
+    },
+    "Mistral": {
+      "prompt_words_median": 15.0,
+      "non_english_share": 0.002,
+      "task_code": 0.134,
+      "task_math": 0.082,
+      "task_qa": 0.6662,
+      "task_writing": 0.1178
+    }
+  },
+  "versions": {
+    "Claude": {
+      "claude-2.1": 1388,
+      "claude-instant-1": 1022,
+      "claude-1": 992,
+      "claude-2.0": 598
+    },
+    "GPT": {
+      "gpt-3.5-turbo-0613": 938,
+      "gpt-4-1106-preview": 909,
+      "gpt-4-0613": 796,
+      "gpt-4-0314": 498,
+      "gpt-3.5-turbo-1106": 434,
+      "gpt-3.5-turbo-0314": 169,
+      "gpt-4-0125-preview": 143,
+      "gpt-3.5-turbo-0125": 113
+    },
+    "Google": {
+      "palm-2": 1714,
+      "gemini-pro-dev-api": 1195,
+      "gemini-pro": 1091
+    },
+    "Llama": {
+      "llama-2-70b-chat": 1776,
+      "llama-2-13b-chat": 1317,
+      "llama-2-7b-chat": 907
+    },
+    "Mistral": {
+      "mixtral-8x7b-instruct-v0.1": 1686,
+      "mistral-medium": 1537,
+      "mistral-7b-instruct": 731,
+      "mistral-7b-instruct-v0.2": 46
+    }
+  },
+  "top_prompt_ngrams": {
+    "Claude": [
+      "joke .",
+      "pokemon",
+      "away",
+      "india",
+      "stress",
+      "trump",
+      "libraries",
+      "works",
+      "songs",
+      "select",
+      "the body",
+      "box",
+      "suggest a",
+      "Write me",
+      "science ?",
+      "development",
+      "extrovert",
+      "how would",
+      "yellow",
+      "Should"
+    ],
+    "GPT": [
+      "goats",
+      "space",
+      "background",
+      "how high",
+      "cheese",
+      "biden",
+      "Explain me",
+      "ADHD",
+      "density",
+      "Isaac",
+      "? What",
+      "Yo",
+      "please write",
+      "typically",
+      "How would",
+      "evolve",
+      "app that",
+      "model for",
+      "most famous",
+      "extremely"
+    ],
+    "Google": [
+      "generate me",
+      "murder",
+      "logo",
+      ", it",
+      "necessary",
+      "engine",
+      "Describe the",
+      "API",
+      "equivalence",
+      "division",
+      "And",
+      "solution to",
+      "linux",
+      "were",
+      "package",
+      "thermometer",
+      "switzerland",
+      "Blue",
+      "commerce",
+      "singularity"
+    ],
+    "Llama": [
+      "for making",
+      "fuck",
+      "terraform",
+      "most common",
+      "test ?",
+      "crystal",
+      "you have",
+      "models",
+      "evolution",
+      "calculus",
+      "the game",
+      "gains",
+      "Please give",
+      "theorem ?",
+      "dangerous",
+      "Which company",
+      "materials",
+      "the problem",
+      "List",
+      "discipline"
+    ],
+    "Mistral": [
+      "get my",
+      "ship",
+      "year ?",
+      "frontend",
+      "s your",
+      "used in",
+      "LLM",
+      "backwards",
+      "language ?",
+      "What makes",
+      "Ashley",
+      "the best",
+      "generator",
+      "out the",
+      "james",
+      "\" Du",
+      "you understand",
+      "developer",
+      "a dirty",
+      "cookie"
+    ]
+  }
+}

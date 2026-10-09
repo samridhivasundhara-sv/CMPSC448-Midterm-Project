@@ -1,0 +1,48 @@
+/Users/samridhi/llm-fingerprint/src/rq4.py:154: UserWarning: This pattern is interpreted as a regular expression, and has match groups. To actually get the groups, use str.extract.
+  selfid = {fam: {k: float(df[df.LLM_name == fam].LLM_output.str.contains(p, case=False, regex=True).mean())
+family               Claude       GPT    Google     Llama   Mistral
+n_words             153.068   174.626   165.293   226.045   194.890
+n_chars             988.447  1142.530  1060.943  1417.982  1235.076
+n_sentences           9.785    10.668    10.848    13.311    10.994
+avg_sentence_len     23.883    20.390    20.605    22.698    23.717
+avg_word_len          4.898     4.890     4.683     4.788     4.813
+ttr_first100          0.690     0.713     0.679     0.657     0.667
+hapax_ratio           0.474     0.494     0.453     0.375     0.411
+first_person_rate     0.019     0.014     0.016     0.014     0.012
+you_rate              0.011     0.019     0.017     0.018     0.017
+uppercase_ratio       0.029     0.031     0.034     0.028     0.026
+digit_ratio           0.013     0.013     0.015     0.012     0.011
+n_lines              14.512    14.021    15.295    15.178    13.856
+n_paragraphs          5.826     5.218     5.232     4.914     4.498
+n_bullets             2.772     0.816     3.090     0.975     0.672
+n_numbered            0.969     2.247     1.531     2.886     1.998
+n_headers             0.114     0.190     0.167     0.165     0.182
+n_bold                0.010     0.691     1.924     0.030     0.178
+n_code_blocks         0.158     0.174     0.168     0.170     0.187
+has_colon_intro       0.688     0.260     0.216     0.438     0.292
+comma_rate            0.082     0.100     0.103     0.061     0.107
+exclam_rate           0.005     0.007     0.004     0.007     0.004
+question_rate         0.003     0.006     0.005     0.004     0.003
+colon_rate            0.022     0.019     0.022     0.020     0.018
+paren_rate            0.013     0.013     0.015     0.010     0.012
+emoji_count           0.005     0.043     0.010     0.156     0.115
+starts_affirmation    0.068     0.105     0.065     0.270     0.102
+apology_or_refusal    0.120     0.078     0.048     0.094     0.044
+mentions_ai           0.054     0.076     0.060     0.108     0.054
+ends_with_offer       0.194     0.030     0.014     0.104     0.058
+             Claude    GPT  Google  Llama  Mistral
+OpenAI        0.000  0.000   0.000  0.000    0.000
+ChatGPT/GPT   0.003  0.002   0.000  0.000    0.001
+Anthropic     0.000  0.000   0.000  0.000    0.000
+Claude        0.000  0.000   0.000  0.000    0.000
+Google        0.000  0.000   0.000  0.000    0.000
+Meta          0.002  0.004   0.001  0.004    0.003
+Llama         0.000  0.000   0.000  0.000    0.000
+Mistral       0.000  0.000   0.000  0.000    0.000
+feature-only classifier: {'accuracy': 0.5962216624685138, 'macro_f1': 0.5929294621937304, 'group_only': {'length': 0.3411162472519587, 'lexical': 0.359334604125213, 'formatting': 0.4463896316016845, 'punctuation': 0.34250331225938474, 'phrasing': 0.24461181832931897}}
+top features: [('has_colon_intro', 0.07775661339582367), ('n_paragraphs', 0.05817825327012738), ('n_bold', 0.049539120609336275), ('hapax_ratio', 0.03387183424934161), ('n_bullets', 0.030992154738913237), ('n_words', 0.027541067177908163), ('n_numbered', 0.025789213205314222), ('avg_sentence_len', 0.024591026274702842), ('starts_affirmation', 0.02377999746474706), ('first_person_rate', 0.023477507972640876)]
+Claude ['Here is', 'Here', '. -', 'So', ': -', '•', '. So', 'like', 'So in', 'summary', '-', '. •', 'Here are', 'summary ,', 'I do']
+GPT ['* :', 'Remember', '* *', 'various', '. Remember', 'As an', 'might', 'Certainly !', 'assist', '.', 'sorry ,', 'm sorry', 'assistance', 'Certainly', 'Remember ,']
+Google ['* *', '. *', ': *', '. -', '*', '* -', 'It is', 'a number', '` `', 'that .', '.', 'that you', 'here is', 'be used', 'is the']
+Llama ['Sure', '! Here', 'Sure !', ', and', 'So ,', "Here '", '!', 's a', 'just an', ', such', ': 1', ', here', "here '", 'with a', 'm just']
+Mistral ['Note', 'and', 'Note :', '\\ *', 'as', 'm an', 'any questions', '\\', '. I', 'that this', 'note that', 'improve', '. Note', 'that', 'this']

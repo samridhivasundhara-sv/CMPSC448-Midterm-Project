@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Who Wrote It? Identifying LLMs from Their Responses</title>
+<style>
+  @page { size: Letter; margin: 0.8in 0.85in; }
+  :root { --ink:#1a1a1a; --muted:#55534e; --rule:#d9d7d1; --accent:#2a78d6; --shade:#f4f3ef; }
+  body { font-family: "Charter", "Georgia", serif; font-size: 10.5pt; line-height: 1.45; color: var(--ink); background:#fff; max-width: 7in; margin: 0 auto; }
+  h1 { font-size: 19pt; margin: 0 0 4px; line-height: 1.2; }
+  h2 { font-size: 13.5pt; margin: 22px 0 6px; border-bottom: 1px solid var(--rule); padding-bottom: 3px; break-after: avoid; }
+  h3 { font-size: 11pt; margin: 14px 0 4px; break-after: avoid; }
+  p { margin: 5px 0 7px; text-align: justify; }
+  .sub { color: var(--muted); font-size: 10pt; margin-bottom: 2px; }
+  .abstract { background: var(--shade); padding: 10px 14px; border-radius: 4px; margin: 14px 0; }
+  table { border-collapse: collapse; margin: 8px auto 10px; font-size: 9.5pt; break-inside: avoid; }
+  th, td { padding: 3px 9px; border-bottom: 1px solid var(--rule); text-align: right; }
+  th:first-child, td:first-child { text-align: left; }
+  thead th { border-bottom: 1.5px solid var(--ink); }
+  caption { caption-side: bottom; font-size: 9pt; color: var(--muted); padding-top: 4px; }
+  figure { margin: 10px 0 12px; text-align: center; break-inside: avoid; }
+  figure img { max-width: 100%; }
+  figcaption { font-size: 9pt; color: var(--muted); text-align: left; margin-top: 3px; }
+  code { font-family: "Menlo", monospace; font-size: 8.8pt; background: var(--shade); padding: 0 3px; border-radius: 2px; }
+  ul, ol { margin: 4px 0 8px; padding-left: 22px; }
+  li { margin: 2px 0; }
+  .best { font-weight: bold; }
+  .box { border-left: 3px solid var(--accent); padding: 4px 12px; margin: 8px 0; background: #f7f9fc; }
+  .small { font-size: 9pt; color: var(--muted); }
+  .pb { break-before: page; }
+</style>
+</head>
+<body>
+
+<h1>Who Wrote It? Identifying LLMs from Their Responses</h1>
+<div class="sub">CMPSC 448 — Midterm Project</div>
+<div class="sub"><b>Team leader:</b> TEAM_LEADER &nbsp;·&nbsp; <b>Members:</b> TEAM_MEMBERS</div>
+<div class="sub"><b>Code:</b> GITHUB_URL</div>
+
+<div class="abstract">
+<b>Summary.</b> We built a balanced dataset of 20,000 real (prompt, response) pairs from Chatbot Arena,
+covering five LLM families — Claude, GPT, Google (Gemini / PaLM-2), Llama-2 and Mistral — and trained a
+convolutional network (CNN) and a bidirectional LSTM to predict which family wrote a response.
+<b>RQ1:</b> from the response alone, the BiLSTM reaches 66.7% accuracy and the CNN 64.7% (chance = 20%).
+<b>RQ2:</b> the prompt alone is useless (≈21%, chance level) because in Arena every prompt is answered by
+two different models; adding the prompt to the response slightly <i>hurts</i>.
+<b>RQ3:</b> fingerprints transfer to unseen task types with a 6–9 point F1 drop; Claude is identifiable
+almost everywhere, Google is the most task-dependent.
+<b>RQ4:</b> the strongest signals are structural (markdown, bullets, bold text, an introductory
+"Here is …:" line, paragraphing) together with characteristic phrases ("Sure!", "Note:", "Remember,");
+29 hand-crafted style numbers alone reach 0.59 macro-F1, and masking all content words does not reduce accuracy at all.
+</div>
+
+<!-- ============================================================== -->
+<h2>1. Problem definition</h2>
+<p>Given a piece of text produced by a large language model, can we tell which model produced it?
+We frame this as <b>supervised multi-class text classification</b>. Each example is a triple
+<code>(LLM_name, LLM_input, LLM_output)</code>; the label is the <b>model family</b>
+(5 classes: Claude, GPT, Google, Llama, Mistral). Depending on the research question the classifier sees
+the response (<code>LLM_output</code>), the prompt (<code>LLM_input</code>) or both.
+We predict the <i>family</i> rather than the exact version (e.g. <code>gpt-4-0613</code>) because versions of
+the same family share training recipes and style, and because the per-version counts are small and very
+unbalanced.</p>
+<p>We report <b>accuracy</b> and <b>macro-F1</b> (the unweighted mean of the per-class F1 scores). Classes are
+balanced, so the two are nearly identical; chance level is 0.20 for both. Neural results are the mean ± standard
+deviation over <b>3 random seeds</b>.</p>
+
+<!-- ============================================================== -->
+<h2>2. Dataset curation</h2>
+<h3>2.1 Source</h3>
+<p>We use <b><code>lmarena-ai/arena-human-preference-55k</code></b>, a dataset publicly released on Hugging Face
+by the LMSYS / LMArena team (Chatbot Arena). On the Arena website a user types a prompt, two
+<i>anonymous</i> models answer it side by side, and the user votes for the better answer. Each of the 57,477 rows
+contains the prompt, the two model names and the two responses. This source suits the project well:
+(i) the responses are real chatbot outputs, not text we wrote; (ii) the prompts are real user prompts across
+many topics; (iii) it covers more than 60 models from all the major families; and (iv) because the
+<i>same prompt</i> is answered by two different models, it is a controlled setting for RQ2. The data is public
+and was released for research; we use only the prompt/response text and model names (no user identifiers
+are included in the dataset).</p>
+
+<h3>2.2 Construction (<code>src/prepare_data.py</code>)</h3>
+<ol>
+<li><b>First turn only.</b> Prompts and responses are stored as JSON lists of turns (≈13% of rows are
+multi-turn). We keep the first prompt and the first response so every example is a single
+(input, output) pair.</li>
+<li><b>Model → family.</b> We map versions by name prefix: <code>gpt-*</code> → GPT,
+<code>claude-*</code> → Claude, <code>llama-2-*</code> → Llama (Code Llama is excluded),
+<code>mistral-*</code>/<code>mixtral-*</code> → Mistral, <code>gemini-*</code>/<code>palm-*</code> → Google.
+All other models (Vicuna, Yi, Qwen, …) are discarded.</li>
+<li><b>Cleaning.</b> We drop null or empty responses and responses with fewer than 3 words.</li>
+<li><b>Task label (for RQ3).</b> Each prompt receives a coarse task type from an ordered keyword rule:
+<i>code</i> (programming words, code fences), then <i>math</i> (solve, calculate, equations, arithmetic),
+then <i>writing</i> (write, poem, story, email, essay, …), otherwise <i>qa</i>. The rule is simple and
+imperfect, but it is transparent and the categories it produces are clearly different (see RQ3).</li>
+<li><b>Balancing.</b> Before balancing we had 31.0k GPT, 15.8k Claude, 8.6k Mistral, 7.8k Llama and
+4.6k Google responses. We randomly sample <b>4,000 responses per family</b> (20,000 total).</li>
+<li><b>Leak-free split.</b> Arena contains many repeated prompts (e.g. "test" appears 39 times, one survey
+prompt 101 times). We therefore split <b>by normalised prompt text</b> — 70% / 10% / 20% of the
+<i>distinct prompts</i> go to train / validation / test — so the same prompt never appears in two splits.
+This gives 13,922 training, 2,108 validation and 3,970 test examples.</li>
+</ol>
+
+<table>
+<thead><tr><th>Family</th><th>Model versions included (count)</th><th>Total</th></tr></thead>
+<tbody>
+<tr><td>Claude</td><td>claude-2.1 (1388), claude-instant-1 (1022), claude-1 (992), claude-2.0 (598)</td><td>4000</td></tr>
+<tr><td>GPT</td><td>gpt-3.5-turbo-0613/1106/0314/0125 (1654), gpt-4-1106-preview (909), gpt-4-0613 (796), gpt-4-0314 (498), gpt-4-0125-preview (143)</td><td>4000</td></tr>
+<tr><td>Google</td><td>palm-2 (1714), gemini-pro-dev-api (1195), gemini-pro (1091)</td><td>4000</td></tr>
+<tr><td>Llama</td><td>llama-2-70b-chat (1776), llama-2-13b-chat (1317), llama-2-7b-chat (907)</td><td>4000</td></tr>
+<tr><td>Mistral</td><td>mixtral-8x7b-instruct (1686), mistral-medium (1537), mistral-7b-instruct (+v0.2) (777)</td><td>4000</td></tr>
+</tbody>
+<caption>Table 1. Composition of the dataset (<code>data/dataset.csv</code>).</caption>
+</table>
+
+<figure>
+<img src="../figures/dataset_tasks.png" style="width:72%">
+<figcaption>Figure 1. Task types per family. Task mix is nearly identical across families (QA ≈ 67%, code ≈ 13%,
+writing ≈ 13%, math ≈ 7%), because every Arena prompt is shown to random pairs of models.</figcaption>
+</figure>
+
+<p><b>Things to keep in mind about the data.</b> (a) A family label mixes several versions and sizes (e.g. GPT-3.5 and GPT-4),
+which makes the task harder and more realistic. (b) All responses date from 2023 – early 2024; newer models are not
+included. (c) Explicit self-identification is almost absent: fewer than 0.5% of responses in any family mention
+"OpenAI", "Anthropic", "Claude", "GPT", "Google", "Llama" or "Mistral" (we measured this), most likely because
+Arena filters out battles where a model reveals its name. So the classifiers cannot simply look for
+"As a model trained by OpenAI".</p>
+
+<!-- ============================================================== -->
+<h2>3. Models and training</h2>
+<h3>3.1 Text processing (<code>src/common.py</code>)</h3>
+<p>We use a simple regular-expression tokenizer, <code>\n | \w+ | [^\w\s]</code>, that keeps <b>case,
+punctuation and line breaks</b> (a newline becomes the token <code>&lt;nl&gt;</code>). This is deliberate:
+markdown symbols (<code>**</code>, <code>#</code>, <code>-</code>, <code>1.</code>) and layout are part of a
+model's style, and a typical NLP pre-processing step (lower-casing, removing punctuation) would throw them away
+(RQ4 measures exactly how much that costs). The vocabulary is the 30,000 most frequent training tokens with frequency ≥ 2;
+anything else maps to <code>&lt;unk&gt;</code>. Sequences are truncated to 384 response tokens (the median response is
+≈150 words) and 128 prompt tokens. For the "input + output" view the model reads
+<code>prompt[:128] &lt;sep&gt; response[:384]</code>.</p>
+
+<h3>3.2 CNN</h3>
+<p>A Kim-style (2014) text CNN. Token ids → 128-dimensional embeddings (trained from scratch, dropout 0.2)
+→ three parallel 1-D convolutions with kernel widths 3, 4 and 5 (128 filters each, ReLU) → global max-pooling over
+time (padding positions are masked out) → concatenation (384 features) → dropout 0.5 → linear layer with
+5 outputs. Each filter is effectively a learned detector for a 3-, 4- or 5-token pattern such as
+"<code>Sure ! Here</code>" or "<code>&lt;nl&gt; - **</code>", and max-pooling asks "does this pattern occur anywhere in the response?".
+Parameters: ≈4.0M (3.8M of them in the embedding table).</p>
+
+<h3>3.3 RNN (bidirectional LSTM)</h3>
+<p>Embeddings (128-d) → <b>2-layer bidirectional LSTM</b> with 128 hidden units per direction (dropout 0.3
+between layers) → for every position the forward and backward states are concatenated (256-d) → the sequence is summarised by
+<b>masked mean-pooling and max-pooling</b> (512-d) → dropout → linear layer. Pooling over all time steps worked better
+in early tests than only using the last hidden state, because the evidence (e.g. a closing "Let me know if…") can be
+anywhere in a long response.</p>
+<p><b>Implementation note.</b> PyTorch's standard way of handling variable-length sequences
+(<code>pack_padded_sequence</code>) was ≈8× slower on the Apple-silicon GPU we used (222 s per epoch). We therefore wrote
+the bidirectional LSTM ourselves: the backward LSTM reads each sequence reversed <i>within its true length</i>
+(padding stays at the end), and its outputs are reversed back. We checked numerically that this gives the same outputs as
+PyTorch's packed bidirectional LSTM (max difference 4·10<sup>-8</sup>). Combined with length-bucketed batches, an epoch takes ≈27 s.</p>
+
+<h3>3.4 Training procedure</h3>
+<ul>
+<li>Loss: cross-entropy. Optimiser: AdamW (learning rate 1·10<sup>-3</sup>, weight decay 10<sup>-4</sup>), batch size 64,
+gradient-norm clipping at 1.0.</li>
+<li>Up to 15 epochs with <b>early stopping</b> on validation macro-F1 (patience 4); the weights from the best validation
+epoch are restored before testing. The test set is used only once per trained model.</li>
+<li>Batches group sequences of similar length (less padding); padded length is rounded up to a multiple of 32.</li>
+<li>Every configuration is trained with seeds 0, 1, 2. Hardware: Apple M2 Pro (PyTorch MPS backend). One CNN run takes ≈1.5 min,
+one BiLSTM run ≈6 min.</li>
+<li><b>Hyper-parameter tuning</b> used the validation set only (<code>results/tuning.txt</code>). The first CNN applied
+dropout 0.5 to the embeddings and stopped after 10 epochs; it learned slowly and erratically (validation F1 0.55).
+Reducing embedding dropout to 0.2 and allowing 15 epochs raised validation F1 to 0.63; a larger learning rate (2·10<sup>-3</sup>)
+was worse (0.58). The BiLSTM reached its best validation F1 (0.67) around epoch 9–13 while training loss kept falling,
+which is the over-fitting point that early stopping is there to catch (Figure 4).</li>
+</ul>
+
+<h3>3.5 Reference model</h3>
+<p>To judge whether the neural models are good, we also train a non-neural baseline: TF-IDF over word unigrams and bigrams
+(case and punctuation kept, 100k features, sub-linear tf) + multinomial logistic regression (C = 5). It is deterministic, so it has no
+standard deviation.</p>
+
+<!-- ============================================================== -->
+<h2>4. Results</h2>
+<h3>4.1 RQ1 — Can we identify which LLM generated a response?</h3>
+<p><b>Yes, about two times out of three.</b> Using only the response text:</p>
+<table>
+<thead><tr><th>Model (output only)</th><th>Accuracy</th><th>Macro-F1</th><th>Best epoch (3 seeds)</th></tr></thead>
+<tbody>
+<tr><td>Chance</td><td>0.200</td><td>0.200</td><td>–</td></tr>
+<tr><td>CNN</td><td>0.647 ± 0.006</td><td>0.645 ± 0.005</td><td>14, 11, 9*</td></tr>
+<tr><td>BiLSTM</td><td class="best">0.667 ± 0.007</td><td class="best">0.666 ± 0.009</td><td>7, 10, 9</td></tr>
+<tr><td>TF-IDF + LogReg (reference)</td><td>0.670</td><td>0.667</td><td>–</td></tr>
+</tbody>
+<caption>Table 2. Test results for RQ1 (3,970 test responses, mean ± std over 3 seeds). *One CNN seed peaked at epoch 14 of 15,
+so a longer schedule might add a little for the CNN.</caption>
+</table>
+<p>The BiLSTM is 2 points better than the CNN, and the difference is larger than the seed-to-seed spread. The
+LSTM reads the whole sequence and can combine evidence from the opening, the layout and the closing of a response,
+while the CNN only reports whether short local patterns occur. Interestingly, the simple TF-IDF model is as good as the
+BiLSTM: with 14k training examples and embeddings learned from scratch, the neural models have no advantage
+from pre-trained language knowledge, and much of the signal is in specific word pairs (see RQ4).</p>
+
+<figure>
+<img src="../figures/rq1_confusion.png" style="width:92%">
+<figcaption>Figure 2. Row-normalised confusion matrices (sum over 3 seeds). Diagonal = recall per family.</figcaption>
+</figure>
+<figure>
+<img src="../figures/rq1_per_class.png" style="width:75%">
+<figcaption>Figure 3. Per-family F1. Claude is by far the easiest family (F1 ≈ 0.89); Mistral is the hardest (≈ 0.50).</figcaption>
+</figure>
+<p><b>Which families get confused?</b> Claude is recognised 87–88% of the time and rarely mistaken for anything else.
+The main confusions are <b>Llama → Mistral</b> (24–26% of Llama responses) and <b>GPT ↔ Mistral</b> (≈20%).
+Mistral's style sits "between" the others: its average length, list use and lexical diversity are all close to
+the overall average (RQ4), so it has few unique cues and acts as a catch-all class, which explains its low F1.
+One possible reason is that open instruction-tuned models are often trained on data written by other chat models, but our data
+cannot confirm this.</p>
+
+<figure>
+<img src="../figures/training_curves.png" style="width:92%">
+<figcaption>Figure 4. Training loss and validation macro-F1 per epoch (output-only). The BiLSTM fits the training data much faster;
+its validation score flattens after ≈7–9 epochs while the loss keeps dropping, so early stopping matters.</figcaption>
+</figure>
+
+<h3>4.2 RQ2 — Does the user's prompt help identify the LLM?</h3>
+<table>
+<thead><tr><th>Input given to the classifier</th><th>TF-IDF + LogReg</th><th>CNN</th><th>BiLSTM</th></tr></thead>
+<tbody>
+<tr><td>Input only (prompt)</td><td>0.218</td><td>0.200 ± 0.014</td><td>0.214 ± 0.008</td></tr>
+<tr><td>Output only (response)</td><td class="best">0.667</td><td class="best">0.645 ± 0.005</td><td class="best">0.666 ± 0.009</td></tr>
+<tr><td>Input + Output</td><td>0.646</td><td>0.630 ± 0.015</td><td>0.641 ± 0.005</td></tr>
+</tbody>
+<caption>Table 3. Test macro-F1 for the three input views (chance = 0.20).</caption>
+</table>
+<figure>
+<img src="../figures/rq1_rq2_views.png" style="width:80%">
+<figcaption>Figure 5. RQ1/RQ2 summary: only the response carries information about the author.</figcaption>
+</figure>
+<p><b>(i) Can the LLM be predicted from the prompt alone? No.</b> All three classifiers are at chance level (0.20–0.22).
+This is what the data-collection process predicts. In Chatbot Arena, models are assigned to a prompt at random, and each
+prompt is answered by <i>two</i> models. For the 720 test rows (18%) whose battle partner is also in the test set, a
+prompt-only classifier necessarily outputs the same label for both and can be right at most half the time; it is actually right
+20.7% of the time. The prompt population is also the same for every family: median prompt length is 14–15 words for all five,
+and the task mix differs by at most 2.5 points (Figure 1). The "most predictive prompt words" the TF-IDF model learns are
+noise words (<i>goats, pokemon, terraform, Ashley</i>) — memorised training prompts that do not generalise.</p>
+<p><b>(ii) Does including the input improve classification? No — it slightly hurts</b> (−1.5 to −2.5 F1 points for all three
+models). The prompt adds tokens that contain no information about the author, so the models have more chances to fit noise,
+and (for the neural models) the prompt uses up part of the input length.</p>
+<p><b>(iii) When could input-only work "surprisingly well"?</b> Only when the prompt and the label are linked by how the data was
+collected, not by the models. Examples: each model was queried with its own set of prompts (e.g. GPT on coding datasets, Claude on
+creative writing); models were used during different time periods so prompts mention different events; or one model was only used in
+one language or one application. Then a prompt-only classifier learns "who was asked this kind of question", which is a
+<b>data-collection leak</b>, not an LLM fingerprint. Our result (chance level) is evidence that our dataset is free from this leak,
+so the output-only scores in RQ1 reflect the models' actual writing.</p>
+
+<!-- ============================================================== -->
+<h2>5. In-depth analyses</h2>
+<h3>5.1 RQ3 — Do LLM fingerprints generalise across tasks?</h3>
+<p>We train on some task types and test on a task type the model never saw:
+<b>Setting A</b>: train on code + math + QA, test on <b>writing</b>;
+<b>Setting B</b>: train on general QA only, test on <b>code</b>.
+For each setting we compare three numbers: in-domain test F1 (unseen prompts of the training task types), the score on the
+target task of the RQ1 model that <i>did</i> see that task type during training, and the cross-task score.</p>
+<table>
+<thead><tr><th></th><th colspan="3">A: → writing</th><th colspan="3">B: QA → code</th></tr>
+<tr><th>Model</th><th>in-domain</th><th>seen</th><th>unseen</th><th>in-domain</th><th>seen</th><th>unseen</th></tr></thead>
+<tbody>
+<tr><td>TF-IDF + LogReg</td><td>0.658</td><td>0.664</td><td>0.601</td><td>0.667</td><td>0.603</td><td>0.536</td></tr>
+<tr><td>CNN</td><td>0.645 ± .002</td><td>0.609</td><td>0.559 ± .013</td><td>0.648 ± .004</td><td>0.651</td><td>0.564 ± .018</td></tr>
+<tr><td>BiLSTM</td><td>0.659 ± .003</td><td>0.620</td><td class="best">0.596 ± .011</td><td>0.652 ± .007</td><td>0.683</td><td class="best">0.580 ± .007</td></tr>
+</tbody>
+<caption>Table 4. Macro-F1. "seen" = model trained on all task types (RQ1), evaluated on the same target test set.
+Training sizes: A 12,155; B 9,339; RQ1 13,922.</caption>
+</table>
+<figure>
+<img src="../figures/rq3_cross_task.png" style="width:100%">
+<figcaption>Figure 6. Cross-task generalisation. Orange bars (target task never seen) are lower than the grey and blue bars in every case.</figcaption>
+</figure>
+<p><b>(i) Does performance drop on unseen tasks? Yes, but moderately.</b> F1 drops by 6–9 points relative to in-domain
+and by 2–10 points relative to a model that saw the task type. All scores stay at ≈3× chance, so most of the fingerprint
+transfers. The drop is larger for <b>QA → code</b> than for <b>→ writing</b>: code answers are dominated by code blocks
+whose content is dictated by the problem, so the style cues learned from prose are partly missing, while
+writing tasks still contain the model's usual prose. The BiLSTM transfers best in both settings; TF-IDF suffers most on code
+(its features are specific word pairs, which change completely between topics).</p>
+<figure>
+<img src="../figures/rq3_per_family.png" style="width:80%">
+<figcaption>Figure 7. Per-family F1 drop when the target task is unseen (average of the three models).</figcaption>
+</figure>
+<p><b>(ii) Are some models more consistently identifiable? Yes.</b> <b>Claude</b> barely changes (drop 0.01 on writing,
+0.06 on code; cross-task F1 0.76–0.88) — its habits (an introduction line ending in a colon, bullet lists, "In summary",
+closing offers) show up whatever the task. <b>Google</b> is the least consistent (drop 0.13 and 0.16): its most typical
+cue, heavy <b>bold</b> markdown, depends on the type of answer (structured explanations) and partly disappears in poems,
+stories and code.</p>
+<p><b>(iii) General fingerprint or task-specific patterns? Both.</b> A general fingerprint clearly exists (60% accuracy on a
+never-seen task type). But a part of what the classifiers learn is task-specific: how a family formats a
+<i>certain kind</i> of answer. A classifier meant to be used in practice should therefore be trained on a mix of tasks.</p>
+
+<h3>5.2 RQ4 — What characteristics distinguish different LLMs?</h3>
+<p>We answer "why" with four complementary analyses (<code>src/rq4.py</code>).</p>
+
+<p><b>(a) Measurable style differences.</b> We computed 29 interpretable features per response in five groups:
+<i>length</i> (words, sentences, average sentence/word length), <i>lexical</i> (type–token ratio on the first 100 words,
+hapax ratio, rates of "I" and "you", upper-case and digit ratios), <i>formatting</i> (lines, paragraphs, bullet and numbered lines,
+markdown headers, bold spans, code blocks, first line ending in a colon), <i>punctuation</i> (rates of , ! ? : ( and emoji) and
+<i>phrasing</i> (starts with "Sure/Certainly/Of course", apology or refusal, mentions being an AI, ends with an offer such as
+"let me know").</p>
+<figure>
+<img src="../figures/rq4_features.png" style="width:100%">
+<figcaption>Figure 8. Selected style features per family. Lengths are capped for display.</figcaption>
+</figure>
+<ul>
+<li><b>Claude</b>: the shortest answers (153 words on average), the most paragraphs, many bullet lines, an introduction ending in
+a colon in 69% of responses ("Here is a basic explanation of …:"), and the most closing offers (19%).</li>
+<li><b>GPT</b>: the highest lexical diversity (type–token and hapax ratios), apologies ("I'm sorry, but…") and the words
+<i>Certainly!</i>, <i>various</i>, <i>Remember,</i> and <i>Please note</i>.</li>
+<li><b>Google</b> (Gemini/PaLM-2): by far the most <b>bold</b> text (1.9 bold spans per response vs 0.01 for Claude) and
+the most bullet points (3.1 per response).</li>
+<li><b>Llama-2</b>: the longest answers (226 words), the lowest lexical diversity, opens with "Sure!" 27% of the time, the most
+numbered lists and emoji.</li>
+<li><b>Mistral</b>: long answers, numbered lists, and the characteristic word "Note:"/"Note that" — otherwise close to GPT,
+which matches the confusions in Figure 2.</li>
+</ul>
+
+<p><b>(b) How much can style alone do?</b> A gradient-boosted tree classifier that sees <b>only the 29 numbers</b> — no words at
+all — reaches <b>0.59 macro-F1</b> (accuracy 0.60), i.e. 89% of the CNN's score. Trained on one feature group at a time,
+formatting is the strongest group (0.45), followed by lexical (0.36), punctuation (0.34), length (0.34) and phrasing (0.24).
+Permutation importance (how much F1 drops when one feature is shuffled) ranks: colon intro (0.078), number of paragraphs (0.058),
+bold spans (0.050), hapax ratio (0.034), bullet lines (0.031), word count (0.028), numbered lines, sentence length,
+"Sure"-style openings and first-person rate.</p>
+<figure>
+<img src="../figures/rq4_feature_groups.png" style="width:62%">
+<img src="../figures/rq4_importance.png" style="width:62%">
+<figcaption>Figure 9. Top: F1 using one feature group at a time. Bottom: the 15 most important features.</figcaption>
+</figure>
+
+<p><b>(c) What words does a classifier use?</b> The largest TF-IDF logistic-regression weights per family are:</p>
+<table>
+<thead><tr><th>Family</th><th style="text-align:left">Most indicative n-grams (response text)</th></tr></thead>
+<tbody>
+<tr><td>Claude</td><td style="text-align:left"><code>Here is</code>, <code>Here are</code>, <code>•</code>, <code>: -</code>, <code>So</code>, <code>in summary</code>, <code>Okay ,</code>, <code>I do</code></td></tr>
+<tr><td>GPT</td><td style="text-align:left"><code>Remember</code>, <code>Certainly !</code>, <code>As an</code>, <code>various</code>, <code>assist</code>, <code>m sorry</code>, <code>Please note</code>, <code>* :</code></td></tr>
+<tr><td>Google</td><td style="text-align:left"><code>* *</code> (bold), <code>: *</code>, <code>. *</code>, <code>It is</code>, <code>be used</code>, <code>a number</code></td></tr>
+<tr><td>Llama</td><td style="text-align:left"><code>Sure !</code>, <code>! Here</code>, <code>So ,</code>, <code>just an</code>, <code>m just</code> (an AI), <code>such as</code>, <code>: 1</code></td></tr>
+<tr><td>Mistral</td><td style="text-align:left"><code>Note :</code>, <code>note that</code>, <code>\ *</code> (escaped markdown), <code>any questions</code>, <code>improve</code></td></tr>
+</tbody>
+<caption>Table 5. The signals are mostly <i>function phrases and formatting</i>, not topic words.</caption>
+</table>
+
+<p><b>(d) Ablations: remove one kind of signal and retrain.</b> We transform every response (train, validation and test) and
+retrain the CNN (3 seeds) and the BiLSTM (1 seed, for time reasons):</p>
+<ul>
+<li><i>No markdown / layout</i>: remove bullets, list numbers, headers, bold, code fences; collapse all whitespace.</li>
+<li><i>Words only</i>: lower-cased words only (no punctuation, case, layout or emoji).</li>
+<li><i>First 50 tokens</i>: keep only the beginning of the response (removes most length information).</li>
+<li><i>Content words masked</i>: keep the 300 most frequent training tokens (function words, punctuation, markdown) and
+replace every other word by <code>&lt;w&gt;</code>; this removes topic while keeping style.</li>
+<li><i>Word order shuffled</i>: randomly permute the tokens of each response (same bag of words, no order).</li>
+</ul>
+<table>
+<thead><tr><th>Training/test text</th><th>CNN (3 seeds)</th><th>Δ</th><th>BiLSTM (1 seed)</th><th>Δ</th></tr></thead>
+<tbody>
+<tr><td>Original</td><td>0.647 ± .009</td><td>–</td><td>0.649</td><td>–</td></tr>
+<tr><td>Content words masked</td><td>0.638 ± .001</td><td>−0.01</td><td>0.659</td><td>+0.01</td></tr>
+<tr><td>No markdown / layout</td><td>0.571 ± .004</td><td>−0.08</td><td>0.586</td><td>−0.06</td></tr>
+<tr><td>First 50 tokens only</td><td>0.558 ± .001</td><td>−0.09</td><td>0.579</td><td>−0.07</td></tr>
+<tr><td>Words only (no punctuation/case/layout)</td><td>0.530 ± .016</td><td>−0.12</td><td>0.545</td><td>−0.10</td></tr>
+<tr><td>Word order shuffled</td><td>0.501 ± .012</td><td>−0.15</td><td>0.542</td><td>−0.11</td></tr>
+</tbody>
+<caption>Table 6. Ablations (test macro-F1). Example of the masked text: "<code>&lt;w&gt; I do not have access to the number of &lt;w&gt; in my
+&lt;w&gt; . As an AI &lt;w&gt; without access to my own system &lt;w&gt; , I &lt;w&gt; &lt;w&gt; or &lt;w&gt; my own &lt;w&gt; .</code>"</caption>
+</table>
+<figure>
+<img src="../figures/rq4_ablation.png" style="width:88%">
+<figcaption>Figure 10. Ablations. Removing content words costs nothing; removing formatting, punctuation or word order costs a lot.</figcaption>
+</figure>
+<p>The results are very clear:</p>
+<ul>
+<li><b>Topic is not the signal.</b> Replacing every word outside the 300 most frequent tokens by <code>&lt;w&gt;</code> leaves the
+scores unchanged (CNN −0.01, BiLSTM +0.01). The classifiers recognise <i>how</i> something is written, not <i>what</i> it is about,
+which is also why prompts (RQ2) do not help.</li>
+<li><b>Formatting is worth ≈6–8 points.</b> Removing markdown and layout alone costs more than masking all content words.</li>
+<li><b>Punctuation and case add another ≈4 points</b> on top of formatting (words-only vs no-markdown).</li>
+<li><b>Length and the ending matter, but the opening carries most of the fingerprint.</b> With only the first 50 tokens the models
+keep ≈87–89% of their score — the opening sentence ("Here is …:", "Sure! Here's …", "Certainly!") is very distinctive.</li>
+<li><b>Word order matters most.</b> Shuffling the tokens is the most damaging change (−0.15 for the CNN), so the signal is in
+<i>phrases</i> (n-grams), not in single words. The BiLSTM loses less than the CNN here (−0.11), probably because its mean-pooled hidden states can still
+act like a bag-of-words summary, whereas the CNN's filters are built entirely on local word order.</li>
+</ul>
+
+<p><b>Answers to the RQ4 questions.</b> <b>(i)</b> The classifiers use formatting conventions (markdown, bullets, colons, paragraphing),
+fixed opening and closing phrases, and function-word habits much more than topic words. <b>(ii)</b> The signals are both structural and
+linguistic: formatting alone is the strongest single group, but no single group comes close to the full set, and the
+words-only model still works well above chance. <b>(iii)</b> Yes: removing formatting (−6 to −8 points), punctuation/case (a further −4), length (−7 to −9) or word order
+(−11 to −15) all reduce performance substantially, whereas removing topic words does not reduce it at all. LLM fingerprints
+are stylistic.</p>
+
+<!-- ============================================================== -->
+<h2>6. Lessons and experience</h2>
+<ol>
+<li><b>How the data is split matters as much as the model.</b> Arena contains the same prompt many times. A random split by row
+would place copies of a prompt in both training and test sets. Splitting by prompt text, and checking that prompt-only accuracy is at chance,
+was our main guarantee that the reported numbers measure the models' style and not memorised prompts.</li>
+<li><b>A surprising input-only result means: check the data collection first.</b> RQ2 taught us to treat any "the
+prompt predicts the author" result as a warning sign of a sampling bias in how the data was collected.</li>
+<li><b>Always compare against a simple baseline.</b> Our TF-IDF + logistic regression model, trained in seconds, matched the
+BiLSTM. Without it we might have over-interpreted the neural results. Deep models are not automatically better on
+small datasets with no pre-training.</li>
+<li><b>Pre-processing choices are modelling choices.</b> Standard text cleaning (lower-casing, removing punctuation and
+newlines) would have deleted much of the signal we were looking for. Keeping newlines and markdown as tokens was essential.</li>
+<li><b>Tune on validation, report on test, use several seeds.</b> The first CNN looked much worse than it really was because its
+dropout was too strong and its training stopped too early. Seed-to-seed differences (±1–2 points) are as large as some of the
+effects we measured, so single runs would have been misleading.</li>
+<li><b>Engineering problems take real time.</b> Packed LSTMs were 8× slower on the Mac GPU, and the GPU memory cache grew with every
+new batch shape until the machine started swapping (CNN epochs went from 7 s to 150–580 s). Writing our own bidirectional LSTM
+(and verifying it numerically against PyTorch's) and rounding padded lengths to a multiple of 32 fixed both problems.</li>
+<li><b>Accuracy tells you <i>whether</i>, analysis tells you <i>why</i>.</b> The ablations and the interpretable features
+turned a single number (66%) into concrete knowledge: Claude can be recognised by its colon introductions and bullets, Google by bold text,
+Llama by "Sure!", Mistral by "Note:". These cues are also easy to change with a system prompt or a post-processing step, so
+a real-world LLM detector built on them would be easy to fool.</li>
+</ol>
+
+<h2>7. Limitations and future work</h2>
+<ul>
+<li>Only 2023 – early-2024 models; newer versions (GPT-4o, Claude 3+, Llama 3, Gemini 1.5+) may behave differently.</li>
+<li>Family labels merge versions of very different size; per-version classification would be harder and is left for future work.</li>
+<li>Task labels come from a keyword heuristic and contain some mistakes.</li>
+<li>The models learn embeddings from scratch; fine-tuning a pre-trained transformer (e.g. RoBERTa) would likely score higher and
+could be combined with the style features.</li>
+</ul>
+
+<h2>8. Reproducibility and use of AI tools</h2>
+<p>All code, the processed dataset, per-run results (JSON), training logs and figures are in the repository; <code>run_all.sh</code>
+reproduces every number in this report. As allowed by the course policy, we used an AI assistant (Claude) to help write and debug code,
+plan experiments and draft text. We ran all experiments ourselves and checked the results; the team is responsible for and able to explain
+all of the submitted work.</p>
+
+</body>
+</html>

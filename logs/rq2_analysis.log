@@ -1,0 +1,14 @@
+{'accuracy': 0.21838790931989924, 'macro_f1': 0.2178058781823961}
+{'n_test_rows_in_pairs': 720, 'share_of_test': 0.181360201511335, 'accuracy_on_paired_rows': 0.20694444444444443, 'accuracy_on_unpaired_rows': 0.22092307692307692, 'max_possible_on_paired_rows': 0.5}
+          prompt_words_median  non_english_share  task_code  task_math  task_qa  task_writing
+LLM_name                                                                                     
+Claude                   15.0              0.002      0.140      0.077    0.658         0.125
+GPT                      15.0              0.002      0.135      0.070    0.671         0.124
+Google                   14.0              0.001      0.116      0.064    0.682         0.138
+Llama                    15.0              0.000      0.133      0.070    0.664         0.133
+Mistral                  15.0              0.002      0.134      0.082    0.666         0.118
+Claude ['joke .', 'pokemon', 'away', 'india', 'stress', 'trump', 'libraries', 'works', 'songs', 'select', 'the body', 'box']
+GPT ['goats', 'space', 'background', 'how high', 'cheese', 'biden', 'Explain me', 'ADHD', 'density', 'Isaac', '? What', 'Yo']
+Google ['generate me', 'murder', 'logo', ', it', 'necessary', 'engine', 'Describe the', 'API', 'equivalence', 'division', 'And', 'solution to']
+Llama ['for making', 'fuck', 'terraform', 'most common', 'test ?', 'crystal', 'you have', 'models', 'evolution', 'calculus', 'the game', 'gains']
+Mistral ['get my', 'ship', 'year ?', 'frontend', 's your', 'used in', 'LLM', 'backwards', 'language ?', 'What makes', 'Ashley', 'the best']

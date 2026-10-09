@@ -1,0 +1,8 @@
+### A_to_writing: train 12155 | in-domain test 3470 | cross-domain test 500
+== A_to_writing tfidf in-domain F1 0.658 | cross-domain F1 0.601
+== A_to_writing cnn   in-domain F1 0.645 | cross-domain F1 0.559
+== A_to_writing lstm  in-domain F1 0.659 | cross-domain F1 0.596
+### B_qa_to_code: train 9339 | in-domain test 2648 | cross-domain test 518
+== B_qa_to_code tfidf in-domain F1 0.667 | cross-domain F1 0.536
+== B_qa_to_code cnn   in-domain F1 0.648 | cross-domain F1 0.564
+== B_qa_to_code lstm  in-domain F1 0.652 | cross-domain F1 0.580

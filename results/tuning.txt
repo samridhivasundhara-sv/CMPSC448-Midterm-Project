@@ -1,0 +1,10 @@
+Hyper-parameter tuning (output-only view, seed 0, metric = VALIDATION macro-F1; test set untouched)
+
+CNN (emb 128, filters 3/4/5 x 128, batch 64, AdamW)
+  emb_dropout 0.5, lr 1e-3, max 10 epochs, patience 3 : best val 0.546 (seed 0), 0.609 (seed 1, still rising at epoch 10)
+  emb_dropout 0.2, lr 1e-3, max 15 epochs, patience 4 : best val 0.629   <- chosen
+  emb_dropout 0.2, lr 2e-3, max 15 epochs, patience 4 : best val 0.578
+  emb_dropout 0.0, lr 1e-3, max 15 epochs, patience 4 : best val 0.631 (same as 0.2; kept 0.2 for regularisation)
+
+BiLSTM (emb 128, 2 layers x 128 hidden per direction, dropout 0.3, batch 64, AdamW lr 1e-3)
+  max 15 epochs, patience 4 : best val 0.669 at epoch 13 (train loss still falling -> early stopping guards overfitting)
