@@ -112,6 +112,24 @@ This gives 13,922 training, 2,108 validation and 3,970 test examples.</li>
 <caption>Table 1. Composition of the dataset (<code>data/dataset.csv</code>).</caption>
 </table>
 
+
+<p><b>What the data looks like.</b> Table 2 shows five test-set examples, one per family, picked from short
+prompts so they fit on the page (line breaks in responses are shown as spaces or "/"). Most prompts are casual,
+and the style differences are already visible: Claude often starts with "Here is …", Llama with "Yes, I am
+familiar …" or "Sure, I'd be happy to …", and Gemini uses bullet dashes even for a single fact.</p>
+
+<table style="font-size:8.8pt; width:100%">
+<thead><tr><th style="width:17%">LLM_name</th><th style="width:28%;text-align:left">LLM_input (prompt)</th><th style="text-align:left">LLM_output (response)</th></tr></thead>
+<tbody>
+<tr><td>Claude<br><span class="small">claude-2.1</span></td><td style="text-align:left">A sentence with be at each other&#x27;s throats</td><td style="text-align:left">Here is a sentence using the idiomatic expression &quot;be at each other&#x27;s throats&quot;: The two political candidates were at each other&#x27;s throats during the debate, constantly interrupting each other and launching personal attacks instead of focusing on the issues.</td></tr>
+<tr><td>GPT<br><span class="small">gpt-3.5-turbo-0613</span></td><td style="text-align:left">What&#x27;s the population of the sun?</td><td style="text-align:left">The sun is not a planet or a living organism, so it doesn&#x27;t have a population. However, the sun is estimated to have a mass equivalent to about 333,000 times that of Earth, and it is believed to be made up mostly of hydrogen and helium.</td></tr>
+<tr><td>Google<br><span class="small">gemini-pro-dev-api</span></td><td style="text-align:left">Tell me  a fun fact about the Roman Empire</td><td style="text-align:left">- The Romans were the first to invent and use concrete, which revolutionized construction and architecture. This innovative material allowed them to build structures like the Pantheon, which still stands today as a testament to their engineering prowess.</td></tr>
+<tr><td>Llama<br><span class="small">llama-2-13b-chat</span></td><td style="text-align:left">do you know &#x27;rpg maker mv&#x27; ? answer in yes or no.</td><td style="text-align:left">Yes, I am familiar with RPG Maker MV. It is a popular game development software that allows users to create their own role-playing games (RPGs) with a user-friendly interface and a wide range of features. It is available for Windows, macOS, and Linux.</td></tr>
+<tr><td>Mistral<br><span class="small">mistral-medium</span></td><td style="text-align:left">Write an inspiring haiku about a paperclip</td><td style="text-align:left">Bending humble strength, / In silent support it stands firm, / Binding dreams in form.</td></tr>
+</tbody>
+<caption>Table 2. Example (LLM_name, LLM_input, LLM_output) rows from <code>data/dataset.csv</code> (test split, quoted verbatim).</caption>
+</table>
+
 <figure>
 <img src="../figures/dataset_tasks.png" style="width:72%">
 <figcaption>Figure 1. Task types per family. Task mix is nearly identical across families (QA ≈ 67%, code ≈ 13%,
@@ -190,7 +208,7 @@ standard deviation.</p>
 <tr><td>BiLSTM</td><td class="best">0.667 ± 0.007</td><td class="best">0.666 ± 0.009</td><td>7, 10, 9</td></tr>
 <tr><td>TF-IDF + LogReg (reference)</td><td>0.670</td><td>0.667</td><td>–</td></tr>
 </tbody>
-<caption>Table 2. Test results for RQ1 (3,970 test responses, mean ± std over 3 seeds). *One CNN seed peaked at epoch 14 of 15,
+<caption>Table 3. Test results for RQ1 (3,970 test responses, mean ± std over 3 seeds). *One CNN seed peaked at epoch 14 of 15,
 so a longer schedule might add a little for the CNN.</caption>
 </table>
 <p>The BiLSTM is 2 points better than the CNN, and the difference is larger than the seed-to-seed spread. The
@@ -228,7 +246,7 @@ its validation score flattens after ≈7–9 epochs while the loss keeps droppin
 <tr><td>Output only (response)</td><td class="best">0.667</td><td class="best">0.645 ± 0.005</td><td class="best">0.666 ± 0.009</td></tr>
 <tr><td>Input + Output</td><td>0.646</td><td>0.630 ± 0.015</td><td>0.641 ± 0.005</td></tr>
 </tbody>
-<caption>Table 3. Test macro-F1 for the three input views (chance = 0.20).</caption>
+<caption>Table 4. Test macro-F1 for the three input views (chance = 0.20).</caption>
 </table>
 <figure>
 <img src="../figures/rq1_rq2_views.png" style="width:80%">
@@ -267,7 +285,7 @@ target task of the RQ1 model that <i>did</i> see that task type during training,
 <tr><td>CNN</td><td>0.645 ± .002</td><td>0.609</td><td>0.559 ± .013</td><td>0.648 ± .004</td><td>0.651</td><td>0.564 ± .018</td></tr>
 <tr><td>BiLSTM</td><td>0.659 ± .003</td><td>0.620</td><td class="best">0.596 ± .011</td><td>0.652 ± .007</td><td>0.683</td><td class="best">0.580 ± .007</td></tr>
 </tbody>
-<caption>Table 4. Macro-F1. "seen" = model trained on all task types (RQ1), evaluated on the same target test set.
+<caption>Table 5. Macro-F1. "seen" = model trained on all task types (RQ1), evaluated on the same target test set.
 Training sizes: A 12,155; B 9,339; RQ1 13,922.</caption>
 </table>
 <figure>
@@ -341,7 +359,7 @@ bold spans (0.050), hapax ratio (0.034), bullet lines (0.031), word count (0.028
 <tr><td>Llama</td><td style="text-align:left"><code>Sure !</code>, <code>! Here</code>, <code>So ,</code>, <code>just an</code>, <code>m just</code> (an AI), <code>such as</code>, <code>: 1</code></td></tr>
 <tr><td>Mistral</td><td style="text-align:left"><code>Note :</code>, <code>note that</code>, <code>\ *</code> (escaped markdown), <code>any questions</code>, <code>improve</code></td></tr>
 </tbody>
-<caption>Table 5. The signals are mostly <i>function phrases and formatting</i>, not topic words.</caption>
+<caption>Table 6. The signals are mostly <i>function phrases and formatting</i>, not topic words.</caption>
 </table>
 
 <p><b>(d) Ablations: remove one kind of signal and retrain.</b> We transform every response (train, validation and test) and
@@ -364,7 +382,7 @@ replace every other word by <code>&lt;w&gt;</code>; this removes topic while kee
 <tr><td>Words only (no punctuation/case/layout)</td><td>0.530 ± .016</td><td>−0.12</td><td>0.545</td><td>−0.10</td></tr>
 <tr><td>Word order shuffled</td><td>0.501 ± .012</td><td>−0.15</td><td>0.542</td><td>−0.11</td></tr>
 </tbody>
-<caption>Table 6. Ablations (test macro-F1). Example of the masked text: "<code>&lt;w&gt; I do not have access to the number of &lt;w&gt; in my
+<caption>Table 7. Ablations (test macro-F1). Example of the masked text: "<code>&lt;w&gt; I do not have access to the number of &lt;w&gt; in my
 &lt;w&gt; . As an AI &lt;w&gt; without access to my own system &lt;w&gt; , I &lt;w&gt; &lt;w&gt; or &lt;w&gt; my own &lt;w&gt; .</code>"</caption>
 </table>
 <figure>
