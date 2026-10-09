@@ -46,5 +46,5 @@ python3 -m venv .venv
 
 ## Team
 
-* Team leader: _name_
-* Members: _names_
+* Team leader: Samridhi Vasundhara
+* Members: Samridhi Vasundhara, Rishita Shukla, Harshitha Rao Renati
