@@ -260,8 +260,9 @@ prompt-only classifier necessarily outputs the same label for both and can be ri
 and the task mix differs by at most 2.5 points (Figure 1). The "most predictive prompt words" the TF-IDF model learns are
 noise words (<i>goats, pokemon, terraform, Ashley</i>) — memorised training prompts that do not generalise.</p>
 <p><b>(ii) Does including the input improve classification? No — it slightly hurts</b> (−1.5 to −2.5 F1 points for all three
-models). The prompt adds tokens that contain no information about the author, so the models have more chances to fit noise,
-and (for the neural models) the prompt uses up part of the input length.</p>
+models). The prompt adds tokens that contain no information about the author, so the models have more chances to fit noise.
+This is not a truncation effect: the prompt and response are truncated separately (<code>prompt[:128] &lt;sep&gt; response[:384]</code>),
+so the model sees exactly the same response tokens with or without the prompt.</p>
 <p><b>(iii) When could input-only work "surprisingly well"?</b> Only when the prompt and the label are linked by how the data was
 collected, not by the models. Examples: each model was queried with its own set of prompts (e.g. GPT on coding datasets, Claude on
 creative writing); models were used during different time periods so prompts mention different events; or one model was only used in
@@ -363,7 +364,10 @@ bold spans (0.050), hapax ratio (0.034), bullet lines (0.031), word count (0.028
 </table>
 
 <p><b>(d) Ablations: remove one kind of signal and retrain.</b> We transform every response (train, validation and test) and
-retrain the CNN (3 seeds) and the BiLSTM (1 seed, for time reasons):</p>
+retrain the CNN (3 seeds) and the BiLSTM (1 seed, for time reasons). The "Original" row is a fresh re-run inside this
+experiment, so it differs slightly from RQ1 (BiLSTM 0.649 here vs 0.666 ± .009 over 3 seeds in Table 3; the same seed scored 0.658 there):
+training on the GPU is not bit-for-bit deterministic, and the gap is within normal seed-to-seed variation. Each Δ is computed
+against the "Original" row of this table, so all comparisons use the same runs.</p>
 <ul>
 <li><i>No markdown / layout</i>: remove bullets, list numbers, headers, bold, code fences; collapse all whitespace.</li>
 <li><i>Words only</i>: lower-cased words only (no punctuation, case, layout or emoji).</li>
